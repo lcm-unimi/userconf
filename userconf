@@ -1,0 +1,658 @@
+#Last update:
+#+  2011/01/26 - compa&paolocomensoli
+
+#!/bin/sh
+
+DIALOG=${DIALOG=dialog}
+
+########## INIZIALIZZAZIONE VARIABILI #####################
+init_variabili ()
+{
+NOME=""
+MATRICOLA=""
+OPZIONE_EMAIL=1
+GROUP=users
+PSHELL=/bin/bash
+let EXP_YEAR=$(date +%F | cut -d '-' -f 1)+3
+PEXPIRE="$EXP_YEAR-$(date +%F | cut -d '-' -f 2-)"
+AMBIENT=""
+BIND="dc=nanos8,dc=pcteor1"
+MANAGER="cn=Manager"
+}
+
+
+#############################################################
+################# FUNZIONI DI CHECK #########################
+#############################################################
+
+################ UTENTE GIA' ESISTENTE ######################
+check_exist ()
+{
+#BUG! modificato il "grep -w" in "grep -xE" by lampo & jacopogh
+#jacopogh: sostituito con getent passwd per maggior sicurezza
+if getent passwd | cut -d ":" -f 1 | grep -xqiE \!?$LOGIN; then
+	#if test $PASSWD = $LOGIN ; then
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+	"\nLa login $LOGIN esiste gia'!!!
+	Si prega di cambiarla." 8 52
+	$AMBIENT
+	return 1;
+fi
+return 0;
+}
+
+################# CONTROLLO MAIUSCOLA ########################
+#non vogliamo utenti con lettere maiuscole: 
+#l'email e` case-insensitive e cosi` pure il campo username di ldap
+check_maiusc ()
+{
+if echo $LOGIN|grep -qE [[:upper:]]; then
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+	"\nLa login $LOGIN contiene delle maiuscole!!!
+	Si prega di cambiarla." 8 52
+	$AMBIENT
+	return 1;
+fi
+return 0;
+}
+
+################# CONTROLLO PUNTO NEL LOGIN ###################
+#non vogliamo utenti con il punto perche` non funziona il talk
+check_punto ()
+{
+if echo $LOGIN|grep -q "\."; then
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+	"\nLa login $LOGIN contiene un punto!!!
+	Si prega di cambiarla." 8 52
+	$AMBIENT
+	return 1;
+fi
+return 0;
+
+}
+
+################ CONTROLLO MATRICOLA DOPPIA ##################
+#Utente doppio (matricola gia' usata)
+check_double ()
+{
+if echo $MATRICOLA|grep -qE [[:digit:]]; then
+	if ldapsearch -x "(employeeNumber=$MATRICOLA)"|grep -q 'uid='; then 
+		AMBIENT=inizio
+		double
+		DOUBLE=`grep -E \,$MATRICOLA\: /etc/passwd|cut -d: -f 1,5,7`
+		$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+		"\nEsiste gia' un account con matricola $MATRICOLA!!!\n
+		L'account e':\n
+		$DOUBLE \n
+		Cambia password a questo invece di crearne uno nuovo" 12 70
+		MATRICOLA=""
+		$AMBIENT
+		return 1;
+	fi
+return 0;
+fi
+
+}
+
+
+#paolocomensoli
+# Controlla che tutti i dati siano stati inseriti. E in caso ne manchi qualcuno ritorna alla finestra crea
+# Viene chiamata dalla funzione add (e modifica...)
+controlla_dati ()
+{
+if [ -z "$NOME" ];then
+         $DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+         "\n Inserire il nome dell'utente" 9 52
+        $AMBIENT
+	return 1
+fi
+
+if [ -z "$MATRICOLA" ];then
+         $DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+         "\n Inserire la matricola dell'utente" 9 52
+        $AMBIENT
+	return 1
+fi
+
+if [ -z "$EMAIL" ];then
+        $DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+        "\n Scegliere cosa fare con l'email" 9 52
+        $AMBIENT
+	return 1
+fi
+return 0
+}	#Fine check ()
+
+
+
+
+
+#################################################################
+############## FUNZIONI DI INPUT ################################
+#################################################################
+
+
+# Modifica del nome utente
+nome ()
+{
+	
+	
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"Il nome completo dell'utente e' (formato Nome Cognome):" 9 52 "$NOME"  2> /tmp/inputbox.$$
+
+	NOME=`cat /tmp/inputbox.$$`
+	rm -f /tmp/inputbox.$$
+
+	$AMBIENT
+}
+
+# Modifica la matricola
+matricola ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"La matricola dell'utente e':" 9 52 "$MATRICOLA" 2> /tmp/inputbox.$$
+
+	MATRICOLA=`cat /tmp/inputbox.$$`
+	rm -f /tmp/inputbox.$$
+
+	check_double	#controllo matricola doppia
+	if [ $? == 1 ]; then return 0; fi
+
+	$AMBIENT
+}
+
+
+
+#Inserimento dell'indirizzo email
+email_input ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"La mail dell'utente e':" 9 52 "$EMAIL" 2> /tmp/inputbox.$$
+	
+	EMAIL=`cat /tmp/inputbox.$$`
+	rm -f /tmp/inputbox.$$
+	
+	$AMBIENT
+}
+
+
+#compa+paolocomensoli: opzioni sull'inserimento indirizzo email
+email ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --menu \
+	"Cosa vuoi fare della mail?" 14 52 5 \
+	"Nulla"          "Non fare niente" \
+	"Forward"      "Mail sia su lcm che su altra" \
+	"Redirect"       "Tutte le mail su altra (DISABILITATA!)"  2> /tmp/menu.tmp.$$
+
+	MENU=`cat /tmp/menu.tmp.$$`
+	rm -f /tmp/menu.tmp.$$
+
+	case "$MENU" in
+		Nulla) OPZIONE_EMAIL="1" EMAIL="nessuna" $AMBIENT;;
+		Forward) OPZIONE_EMAIL="2" email_input;;
+		Redirect) OPZIONE_EMAIL="3" email_input;;
+	esac
+}
+
+
+
+# Modifica il gruppo
+gruppo ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"Il gruppo di appartenenza dell'utente e':" 9 52 "$GROUP" 2> /tmp/inputbox.$$
+
+	GROUP=`cat /tmp/inputbox.$$`
+	rm -f /tmp/inputbox.$$
+	
+	$AMBIENT
+}
+
+# Modifica la home
+phome ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"La home attuale dell'utente e':" 9 52 "$PHOME" 2> /tmp/inputbox.$$
+	
+	PHOME=`cat /tmp/inputbox.$$`
+	rm -f /tmp/inputbox.$$
+	
+	$AMBIENT
+}
+
+# Modifica la shell
+pshell ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"La shell dell'utente e':" 9 52 "$PSHELL" 2> /tmp/inputbox.$$
+
+	PSHELL=`cat /tmp/inputbox.$$`
+	rm -f /tmp/inputbox.$$
+	
+	$AMBIENT
+}
+
+# Modifica la data di scadenza
+pexpire ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"Data di scadenza dell'account (YYYY-MM-DD)" 9 52 2> /tmp/inputbox.$$
+
+	PEXPIRE=`cat /tmp/inputbox.$$`
+	rm -f /tmp/inputbox.$$
+
+	$AMBIENT
+}
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+
+
+########################### FINESTRA INIZIO ####################################
+ 
+inizio ()
+{
+	init_variabili
+	AMBIENT=inizio
+
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --menu \
+	"Il programma e' in fase di sviluppo.
+	Alcune funzioni potrebbero essere non ancora
+	implementate." 14 68 5 \
+	"Crea"          "Per creare un nuovo utente" \
+	"Modifica"      "Per modificare un account esistente" \
+	"Modifica_pwd"  "Per modificare la pwd di un account esistente" \
+	"Elimina"       "Per rimuovere un account" \
+	"Esci"          "Per uscire dal programma" 2> /tmp/menu.tmp.$$
+
+	MENU=`cat /tmp/menu.tmp.$$`
+	rm -f /tmp/menu.tmp.$$
+
+	case "$MENU" in
+		
+		Crea)
+		$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+		"Inserisci la login del nuovo utente
+		(non usare MAIUSCOLE o un PUNTO):" 8 52 2> /tmp/inputbox.tmp.$$
+	
+		LOGIN=`cat /tmp/inputbox.tmp.$$`
+		rm -f /tmp/inputbox.tmp.$$
+	
+		AMBIENT=inizio
+
+		#CONTROLLI
+		check_maiusc	#jacopogh: test maiuscolo
+		if [ $? == 1 ]; then return 0; fi
+		check_punto	#compa: test punti nel login
+		if [ $? == 1 ]; then return 0; fi
+		check_exist	#test su utente gia' esistente
+		if [ $? == 1 ]; then return 0; fi
+
+		PHOME=/home/$LOGIN
+		crea
+
+		;; # Fine "Crea"
+	
+		Modifica) modifica;;
+		Modifica_pwd) modifica_pwd;;
+		Elimina) elimina ;;
+		Esci) clear exit 0 ;;
+	
+	esac # Chiude il case sul menu
+
+}	#Fine inizio ()
+
+
+####################### CREA #################################### 
+crea ()
+{
+	AMBIENT=crea
+
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --radiolist \
+	"\nInserisci le informazioni richieste
+	per l'utente $LOGIN" 20 52 9 \
+	"Nome"          "$NOME" on \
+	"Matricola"     "$MATRICOLA" off \
+	"Email"         "$EMAIL" off \
+	"Gruppo"        "$GROUP" off \
+	"Home"          "$PHOME" off \
+	"Shell"         "$PSHELL" off \
+	"Scadenza"	"$PEXPIRE" off \
+	"Salva"		"Per creare l'utente" off \
+	"Annulla"	"Torna al menu' precedente" off 2> /tmp/crea.tmp.$$
+
+
+	#se e` tutto a post vado avanti se no riparto dall'inizio
+	case "$?" in 
+		0) ;;
+		*) inizio ;;
+	esac
+
+	INPUT=`cat /tmp/crea.tmp.$$`
+	rm -f /tmp/crea.tmp.$$
+
+	case "$INPUT" in
+		Nome) nome ;;
+		Matricola) matricola ;;
+		Email) email ;;
+		Gruppo) gruppo ;;
+		Home) phome ;;
+		Shell) pshell ;;
+		Scadenza) pexpire;;
+		Salva) add ;;
+		Annulla) inizio ;;
+	esac
+
+}	#Fine crea ()
+
+
+############## SALVA LE MODIFICHE ######################################
+add ()
+{
+	controlla_dati
+	if [ $? == 1 ]; then return 0; fi
+
+	TMPUID=$(for i in  $(getent passwd | cut -d : -f 3 | sort -r -n); do if (( $i < 64000)); then echo $(($i+1)); break; fi ; done)
+	useradd -u $TMPUID -c "$NOME,,,,$MATRICOLA" -d $PHOME -g $GROUP -m -s $PSHELL -e $PEXPIRE $LOGIN 
+
+	#BEGIN LDAP PART
+	#jacopogh: sistemare poi col path completo
+
+	# OCCHIO CHE HO CAMBIATO IL PATH DELL'ESEGUIBILE
+	useradd_ldap.sh.expire $LOGIN >/tmp/ldif.userconf.$$
+	if [ $? -ne "0" ]; then
+		echo "USCITA DA USERCONF"
+		echo 'se sei sicuro di aver fatto le cose bene allora e` un bug'
+		echo "segnalamelo subito - jacopogh"
+		#l'utente e` comunque stato creato su file con la sua home e va rimosso
+		userdel -r $LOGIN
+		rm /tmp/ldif.userconf.$$
+		clear
+		exit 1
+	fi
+
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+	"\nL'utente verra' ora inserito nel db LDAP.
+	Si prega di inserire la password di amministrazione di LDAP" 9 52
+	clear
+	ldapadd -x -D "$MANAGER,$BIND" -W -f /tmp/ldif.userconf.$$ -c
+	LDAP_EXIT=$?
+
+	#Controllo errori di ldap:
+	#1) Password esatta?
+	while (($LDAP_EXIT == "49"));
+		do beep -l 2;
+		echo
+		echo "ATTENZIONE"
+		echo "password non inserita correttamente"
+		echo "l'operazione sara' ora ripetuta"
+		echo
+		ldapadd -x -D "$MANAGER,$BIND" -W -f /tmp/ldif.userconf.$$ -c
+		LDAP_EXIT=$?
+	done
+	#2) Altri errori?
+	if  [ $LDAP_EXIT -ne "0" ]; then
+		echo
+		echo "ERRORE LDAP, esco dal programma"
+		echo "(exit status: 1)"
+		echo
+		exit 1	
+	fi
+	
+
+	rm /tmp/ldif.userconf.$$
+
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+	"\nL'utente e' stato creato.
+	Verra' ora richiesto di inserire la nuova password." 9 52
+
+	clear
+	#first try
+	#mask input
+	stty -echo echonl
+	perl -e 'print "vivaldap\n";select(STDOUT); $|=1; while (<STDIN>){print ;}' |passwd $LOGIN
+	#is everything ok?
+	while [ $? -ne "0" ];
+		do beep -l 2;
+		echo "ATTENZIONE"
+		echo "password non impostata correttamente"
+		echo "l'operazione sara' ora ripetuta"
+		sleep 5
+		perl -e 'print "vivaldap\n";select(STDOUT); $|=1; while (<STDIN>){print ;}' | passwd $LOGIN
+	done
+
+	#restore input 
+	stty echo -echonl
+
+	# quota aggiunta by doctornet
+	edquota -p lcm-quota -f /home $LOGIN
+
+	#Eventuale forward/rederict della mail
+	#NOTA che per ora il redirect totale e' disattivato, quindi fa comunque un forward
+	case $OPZIONE_EMAIL in 
+		1) ;;
+		2) echo '&'$EMAIL>>$PHOME/.qmail
+		 #  echo -e `cat /root/mail_benvenuto` | mail $LOGIN@pcteor1.mi.infn.it -s "Benvenuto in LCM"
+		 #  echo -e `cat /root/mail_benvenuto` | mail $EMAIL -s "Benvenuto in LCM"
+		   ;;
+		3) echo '&'$EMAIL>>$PHOME/.qmail
+		 #  echo -e `cat /root/mail_benvenuto` | mail $LOGIN@pcteor1.mi.infn.it -s "Benvenuto in LCM"
+		 #  echo -e `cat /root/mail_benvenuto` | mail $EMAIL -s "Benvenuto in LCM"
+		   ;;
+	esac
+
+
+
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+	"L'operazione e' conclusa!\nL'utente $LOGIN e' stato creato correttamente" 6 52
+
+	init_variabili	#Reset delle variabili
+
+
+	#Vuoi stampare il modulo?
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --defaultno --yesno \
+	"Vuoi stampare il modulo di iscrizione?" 7 52
+
+	case "$?" in
+		0) lpr -P lcmprinter /root/account_request.pdf
+		;;
+	esac
+
+
+	clear
+	exit 0
+
+	#inizio
+}
+
+
+
+
+
+################ MODIFICA ####################################
+
+modifica ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"Inserisci la login dell'utente
+	da modificare:" 9 52 2> /tmp/inputbox.tmp.$$
+
+	LOGIN=`cat /tmp/inputbox.tmp.$$`
+	rm -f /tmp/inputbox.tmp.$$
+
+
+	if getent passwd | cut -d ":" -f 1 | grep -xq $LOGIN; then
+		ID=`id -u $LOGIN`
+		if (( $ID > 1000 )); then
+			clear
+			/usr/local/sbin/usermod.sh $LOGIN
+		else
+			clear
+			echo "UTENTE DI SISTEMA"| beep -f 1 -l 50 -c
+			echo "CIAO CIAO..." | beep -f 1 -l 100 -c
+			$AMBIENT
+			return 1;
+		fi
+	else
+		clear
+		echo "UTENTE INESISTENTE"| beep -f 1 -l 50 -c
+		echo "CIAO CIAO..."| beep -f 1 -l 100 -c
+	
+		$AMBIENT
+		return 1
+	fi
+	
+	sleep 1.5
+	$AMBIENT
+	
+}
+
+
+################ MODIFICA PWD ####################################
+
+modifica_pwd ()
+{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"Inserisci la login dell'utente
+	da modificare:" 9 52 2> /tmp/inputbox.tmp.$$
+
+	LOGIN=`cat /tmp/inputbox.tmp.$$`
+	rm -f /tmp/inputbox.tmp.$$
+
+
+	if getent passwd | cut -d ":" -f 1 | grep -xq $LOGIN; then
+		ID=`id -u $LOGIN`
+		if (( $ID > 1000 )); then
+			clear
+			/usr/local/sbin/passwd_ldap.sh $LOGIN
+		else
+			clear
+			echo "UTENTE DI SISTEMA"| beep -f 1 -l 50 -c
+			echo "CIAO CIAO..." | beep -f 1 -l 100 -c
+			$AMBIENT
+			return 1;
+		fi
+	else
+		clear
+		echo "UTENTE INESISTENTE"| beep -f 1 -l 50 -c
+		echo "CIAO CIAO..."| beep -f 1 -l 100 -c
+	
+		$AMBIENT
+		return 1
+	fi
+	
+	sleep 1.5
+	$AMBIENT
+	
+}
+
+################ ELIMINA ####################################
+
+elimina ()
+	{
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --inputbox \
+	"Inserisci la login dell'utente
+	da sopprimere:" 9 52 2> /tmp/inputbox.tmp.$$
+
+	LOGIN=`cat /tmp/inputbox.tmp.$$`
+	rm -f /tmp/inputbox.tmp.$$
+
+	#Primo controllo: l'utente esiste?
+	if getent passwd | cut -d ":" -f 1 | grep -xq $LOGIN; then
+
+	#Secondo controllo: e' un utente di sistema?	
+	ID=`id -u $LOGIN`
+	if (( $ID > 1000 )); then
+	
+	clear
+	echo "rimozione di"
+	getent passwd |grep -E "^$LOGIN\:"|uniq
+	echo
+	echo "sei sicuro? hai 10 secondi per annullare premendo control-c"
+	echo
+	for (( i=10 ; i>-1 ; i-- )) ; do
+		sleep 1s
+		echo "l'ora di "$LOGIN "sta per arrivare... ancora "$i" secondi..."
+	done
+	echo "LA SUA ORA E' ARRIVATA!"
+	sleep 1.5s
+
+	userdel -r $LOGIN 
+
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+	"\nL'utente verra' ora rimosso dal db LDAP.
+	Si prega di inserire la password di amministrazione di LDAP" 9 52
+
+	clear
+	ldapdelete -x -D "$MANAGER,$BIND" -W "uid=$LOGIN,ou=People,$BIND"
+	LDAP_EXIT=$?
+
+	#Controllo errori di ldap:
+	#1) Password esatta?
+	while (($LDAP_EXIT == "49"));
+		do beep -l 2;
+		echo
+		echo "ATTENZIONE"
+		echo "password non inserita correttamente"
+		echo "l'operazione sara' ora ripetuta"
+		echo
+		ldapdelete -x -D "$MANAGER,$BIND" -W "uid=$LOGIN,ou=People,$BIND"
+		LDAP_EXIT=$?
+	done
+	#2) Altri errori?
+	if  [ $LDAP_EXIT -ne "0" ]; then
+		echo
+		echo "ERRORE LDAP, esco dal programma"
+		echo "(exit status: 1)"
+		echo
+		exit 1	
+	fi
+
+	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+	"L'operazione e' conclusa!\nL'utente $LOGIN e' stato eliminato" 6 52
+	clear
+	exit 0
+
+
+	else	#fine controllo sugli utenti di sistema
+        	$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+        	"\nNON SI FA!!! \n Questo e' un utente di sistema!" 9 52
+	fi	
+
+	else	#fine controllo su esistenza utente
+		$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --msgbox \
+		"L'utente scelto NON esiste!" 6 52
+	fi
+
+	$AMBIENT
+	}	#Fine elimina()
+
+
+
+
+#############################################################
+######################### MAIN  #############################
+#############################################################
+
+
+
+# Messaggio di avviso all'avvio dello script
+$DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --yesno \
+"Questo script per la gestione degli utenti
+puo' essere eseguito esclusivamente da root
+ed agisce in modo irreversibile su alcuni
+file di configurazione del sistema.
+\nSei sicuro di voler proseguire?" 10 52
+
+case "$?" in
+	0) inizio ;;
+esac 
+
+clear
+
+#Chiude lo script
