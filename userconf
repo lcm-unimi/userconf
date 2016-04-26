@@ -643,10 +643,8 @@ elimina ()
 
 # Messaggio di avviso all'avvio dello script
 $DIALOG --title "SCRIPT PER LA GESTIONE DEGLI UTENTI" --yesno \
-"Questo script per la gestione degli utenti
-puo' essere eseguito esclusivamente da root
-ed agisce in modo irreversibile su alcuni
-file di configurazione del sistema.
+"Questo script per la gestione degli utenti puo' essere eseguito esclusivamente da root
+ed agisce in modo irreversibile su alcuni file di configurazione del sistema.
 \nSei sicuro di voler proseguire?" 10 52
 
 case "$?" in
