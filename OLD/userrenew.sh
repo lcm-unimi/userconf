@@ -2,7 +2,7 @@
 #userrenew.sh - add +3 years to user's shadowExpire
 # by jp (2013)
 MANAGER="cn=Manager"
-BIND="dc=xxx.xxx,dc=yyy.yyy"
+BIND="dc=xxxx,dc=xxxx"
 TMPFILE="/tmp/umod.ldif"
 #TMPFILE=tempfile.tmp
 
@@ -50,15 +50,15 @@ echo
 	echo "replace: shadowExpire"
 	echo "shadowExpire: $NEWSHADOW"
 } | tee $TMPFILE
-
+echo "nuova data: $NEWYEAR-$MONTH-$DAY"
 echo
-echo Apportare le modifiche? \(yes/no\)
+echo Apportare le modifiche? \(y/n\)
 
 ANS=boh
 
-until [[ $ANS == "yes" ]]; do
+until [[ $ANS == "y" ]]; do
 	read ANS
-	if [[ $ANS == "no" ]]; then clean 1; fi
+	if [[ $ANS == "n" ]]; then clean 1; fi
 done
 
 EXITSTAT=49
@@ -74,5 +74,31 @@ chage -E $NEWSHADOW $1
 
 echo Modifiche apportate. Nuova data di scadenza: "$NEWYEAR-$MONTH-$DAY".
 
-clean $EXITSTAT
+echo -e "\n\nMandare mail di conferma rinnovo? (y/n)"
 
+ANS=bho
+
+until [[ $ANS == "y" ]]; do
+	read ANS
+	if [[ $ANS == "n" ]]; then clean 1; fi
+done
+
+TOMAIL=$(ldapsearch -x "uid=$1" | grep mail: | cut -f2 -d' ')
+
+
+echo -e "To:<$TOMAIL>
+From:"LCM Staff"  <staff@lcm.mi.infn.it>
+Cc:<working@lcm.mi.infn.it>
+Subject:"Rinnovo Account"
+MIME-Version: 1.0
+Content-Type: text/plain
+
+Ciao, 
+
+abbiamo rinnovato il tuo account.
+La nuova data di scadenza e\`: "$NEWYEAR-$MONTH-$DAY".
+
+Grazie per aver scelto LCM."\
+      | sendmail -t -i	
+        
+clean $EXITSTAT
