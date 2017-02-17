@@ -3,7 +3,7 @@
 # Author:       Gabriele Bozzola (sbozzolo)
 # Email:        sbozzolator@gmail.com
 # Date:         28.04.2016
-# Last Edit:    16.02.2017 (andreatsh)
+# Last Edit:    17.02.2017 (andreatsh)
 
 #~ This module is used to draw the interface
 import npyscreen as nps
@@ -46,7 +46,7 @@ words = {
         'Rederict'       : "Rederict",
         'AppTitle'       : "LCM Userconf",
         'About'          : "About",
-        'AboutApp'       : "Userconf versione 0.2.1",
+        'AboutApp'       : "Userconf versione 0.4.1",
         'ReturnToMain'   : "Torna al Menu",
         'NullPassword'   : "Inserisci una password!", 
         'WrongPassword'  : "Le due password inserite non coincidono",
@@ -69,7 +69,8 @@ words = {
         'User'           : "L'utente ",
         'UserNotExist'   : " non esiste!",
         'UserExist'      : " esiste gia'! ",
-        'NewUserCreated' : "User successfully created!"
+        'NewUserCreated' : "User successfully created!",
+        'UserDeleted'    : "User successfully deleted!"
 }
 
 class MainForm ( nps.ActionFormWithMenus ):
@@ -227,7 +228,7 @@ class NewUserForm (nps.ActionFormV2):
         # else no user with chosen username exists: do nothing
 
         try:
-            db = ldap.lcmldap("ldaps://xx8.xx1.xx.xxxx.it/", 
+            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/", 
                               "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['Warning'], words['Warning'])
@@ -309,7 +310,7 @@ class EditTempForm (nps.ActionFormV2):
         self.parentApp.switchFormNow()
 
 
-class DelForm (nps.ActionFormV2):
+class DelUserForm (nps.ActionFormV2):
     """Class that deletes an user"""
 
     #~ Rename button using Italian language
@@ -318,25 +319,67 @@ class DelForm (nps.ActionFormV2):
     def create(self):
         self.show_atx = 66
         self.show_aty = 20
+        self.ldap  = self.add(nps.TitlePassword, name = words['Ldap'])
         self.uname = self.add(nps.TitleText, name = words['Username'])
 
     def on_cancel(self):
         """Discard edits and return to the main screen"""
-        self.uname.value = ""
         self.return_to_main_screen()
 
     def on_ok(self):
-        #~ Check if user exist
+        # Check fields validity
+        if (self.ldap.value == ""):
+            nps.notify_confirm(words['Warning'], words['Warning'])
+            return 
+        if (self.uname.value == ""):
+            nps.notify_confim(words['Warning'], words['InsertUsername'])
+            return
+ 
+        # Check if this user exists
+        if(ldap.userexists(self.uname.value)):
+            pass
+        else:
+            errormsg = words['User']+self.uname.value+words['UserExist']
+            nps.notify_confirm(errormsg, words['Warning'], editw = 1)
+            return 
+
+        # Try to connect to LDAP database
+        try:
+            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/", 
+                              "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
+        except:
+            nps.notify_confirm(words['Warning'], words['Warning'])
+            return 
+
+        # Ask to confirm you really want to delete this user 
         dele = nps.notify_yes_no(words['ConfirmDel']+self.uname.value+"?",
                                  words['DeleteUser'], editw = 2)
         if (dele):
             dele2 = nps.notify_yes_no(words['AreYouSure']+self.uname.value+"?\n"+ 
-                    words['ItCannotBeUndo'], words['DeleteUser'], editw = 2)
+            words['ItCannotBeUndo'], words['DeleteUser'], editw = 2)
+            if (dele2): 
+                pass
+            else: 
+                return
+        else:
+            return 
+
+        delusercmd="userdel -r "+self.uname.value
+        system(delusercmd)
+
+        db.deluser(self.uname.value)
+
+        nps.notify_confirm(words['UserDeleted'], words['Warning'])
+
+        self.return_to_main_screen()
+
 
     def return_to_main_screen(self):
         """Return to the main screen"""
-        self.parentApp.setNextForm("MAIN")
+        self.ldap.value  = None
+        self.uname.value = None
         self.editing = False
+        self.parentApp.setNextForm("MAIN")
         self.parentApp.switchFormNow()
 
 
@@ -378,6 +421,6 @@ class GUI (nps.NPSAppManaged):
         self.addForm('MAIN', MainForm, name = words['AppTitle']) 
         self.addForm('NEWUSER', NewUserForm, name = words['AddUser'])
         self.addForm('EDITTEMPFORM', EditTempForm, name = words['EditUser'], lines = 6, columns = 45)
-        self.addForm('DELUSER', DelForm, name = words['DeleteUser'], lines = 6, columns = 45)
+        self.addForm('DELUSER', DelUserForm, name = words['DeleteUser'], lines = 6, columns = 45)
         self.addForm('RENEWUSER', RenewForm, name = words['RenewUser'], lines = 6, columns = 45)
 
