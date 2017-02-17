@@ -5,7 +5,7 @@
 
 import ldap
 import ldap.modlist as modlist
-import sys, time 
+import pwd, sys, time 
 
 # Class to manage LDAP
 class lcmldap():
@@ -32,8 +32,8 @@ class lcmldap():
         self.conn.unbind_s()
 
     def adduser(self, name, surname, username, usersecret, expireDate, uidNo, badgenum):
-        if (not self.search_user(username) ): 
-            print("User %s does not exist!", username)
+        if (self.searchuserbyuid(username) ): 
+            print("User %s already exist!", username)
             return
 
         dn = "uid="+username+",ou=People,dc=xx8,dc=xx1" 
@@ -83,7 +83,7 @@ class lcmldap():
             return False
         
     def changepwd(self, username, newsecret):
-        if (not self.search_user(username) ): 
+        if (not self.searchuserbyuid(username) ): 
             print("User %s does not exist!", username)
             return
 
@@ -94,7 +94,7 @@ class lcmldap():
             print("Error: Can\'t change %s password: %s" % (username, e.message['desc']))
 
     def deluser(self, username):
-        if (not self.search_user(username) ): 
+        if (not self.searchuserbyuid(username) ): 
             print("User %s does not exist!", username)
             return
 
