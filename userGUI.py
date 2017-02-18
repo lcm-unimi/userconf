@@ -3,7 +3,7 @@
 # Author:       Gabriele Bozzola (sbozzolo)
 # Email:        sbozzolator@gmail.com
 # Date:         28.04.2016
-# Last Edit:    17.02.2017 (andreatsh)
+# Last Edit:    18.02.2017 (andreatsh)
 
 #~ This module is used to draw the interface
 import npyscreen as nps
@@ -38,15 +38,15 @@ words = {
         'Username'       : "Nome Utente",
         'BadgeNum'       : "Matricola",
         'Email'          : "Email",
-        'Password'       : "Password",
-        'PasswordRepet'  : "Ripeti Password",
+        'Password'       : "Enter Password",
+        'PasswordRepet'  : "Retype Password",
         'EmailConf'      : "Impostazione email",
         'Nothing'        : "Niente",
         'Forward'        : "Forward",
         'Rederict'       : "Rederict",
         'AppTitle'       : "LCM Userconf",
         'About'          : "About",
-        'AboutApp'       : "Userconf versione 0.4.1",
+        'AboutApp'       : "Userconf versione 0.6.1",
         'ReturnToMain'   : "Torna al Menu",
         'NullPassword'   : "Inserisci una password!", 
         'WrongPassword'  : "Le due password inserite non coincidono",
@@ -70,7 +70,8 @@ words = {
         'UserNotExist'   : " non esiste!",
         'UserExist'      : " esiste gia'! ",
         'NewUserCreated' : "User successfully created!",
-        'UserDeleted'    : "User successfully deleted!"
+        'UserDeleted'    : "User successfully deleted!",
+        'PasswordEdited' : "User password successfully changed!"
 }
 
 class MainForm ( nps.ActionFormWithMenus ):
@@ -93,10 +94,11 @@ class MainForm ( nps.ActionFormWithMenus ):
         #~ Main Menu and Edit User menu
         self.menu = self.new_menu(name = words['MainMenu'], shortcut = "m")
         self.menu.addItem(words['AddUser'], self.new_user, "n")
-        self.edito = self.menu.addNewSubmenu( words['EditUser'], "d")
-        self.edito.addItem(words['EditPassword'], self.edit_user, "p")
-        self.edito.addItem(words['EditEmail'], self.edit_user, "e")
-        self.edito.addItem(words['EditBadgeNum'], self.edit_user, "m")
+        self.menu.addItem(words['EditUser'], self.edit_user, "p")
+#        self.edito = self.menu.addNewSubmenu( words['EditUser'], "d")
+#        self.edito.addItem(words['EditPassword'], self.edit_user, "p")
+#        self.edito.addItem(words['EditEmail'], self.edit_user, "e")
+#        self.edito.addItem(words['EditBadgeNum'], self.edit_user, "m")
         self.menu.addItem(words['RenewUser'], self.renew_user, "r")
         self.menu.addItem(words['DeleteUser'], self.delete_user, "c")
         self.menu.addItem(words['AboutUserconf'], self.about, "a")
@@ -135,8 +137,8 @@ class MainForm ( nps.ActionFormWithMenus ):
         self.parentApp.switchFormNow()
 
     def edit_user(self):
-        """Launch EDITTEMPFORM form"""
-        self.parentApp.setNextForm('EDITTEMPFORM')
+        """Launch EDITUSERPWDFORM form"""
+        self.parentApp.setNextForm('EDITUSERPWDFORM')
         self.parentApp.switchFormNow()
 
     def delete_user(self):
@@ -154,14 +156,14 @@ class NewUserForm (nps.ActionFormV2):
 
     def create(self):
         """Add to the form the widgets"""
-        self.ldap     = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 25)
-        self.nname    = self.add(nps.TitleText, name = words['Name'], begin_entry_at = 25)
-        self.surname  = self.add(nps.TitleText, name = words['Surname'], begin_entry_at = 25)
-        self.username = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 25)
-        self.userpass = self.add(nps.TitlePassword, name = words['Password'], begin_entry_at = 25)
-        self.passrepe = self.add(nps.TitlePassword, name = words['PasswordRepet'], begin_entry_at = 25)
-        self.badgenum = self.add(nps.TitleText, name = words['BadgeNum'], begin_entry_at = 25)
-        self.email    = self.add(nps.TitleText, name = words['Email'], begin_entry_at = 25)
+        self.ldap     = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 20)
+        self.nname    = self.add(nps.TitleText, name = words['Name'], begin_entry_at = 20)
+        self.surname  = self.add(nps.TitleText, name = words['Surname'], begin_entry_at = 20)
+        self.username = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 20)
+        self.userpass = self.add(nps.TitlePassword, name = words['Password'], begin_entry_at = 20)
+        self.passrepe = self.add(nps.TitlePassword, name = words['PasswordRepet'], begin_entry_at = 20)
+        self.badgenum = self.add(nps.TitleText, name = words['BadgeNum'], begin_entry_at = 20)
+        self.email    = self.add(nps.TitleText, name = words['Email'], begin_entry_at = 20)
 #        self.emailcon = self.add(nps.TitleSelectOne, name = words['EmailConf'], begin_entry_at = 25,
 #                   values = [words['Forward'],words['Rederict'],words['Nothing']], scroll_exit = True)
 
@@ -180,12 +182,18 @@ class NewUserForm (nps.ActionFormV2):
         # In my experience this is the most difficult step --andreatsh
         if (self.userpass.value=="" or self.passrepe.value==""):
             nps.notify_confirm(words['NullPassword'], words['Warning'])
+            self.userpass.value = None
+            self.passrepe.value = None
             return 
         if (self.userpass.value != self.passrepe.value):
             nps.notify_confirm(words['WrongPassword'], words['Warning'])
+            self.userpass.value = None
+            self.passrepe.value = None
             return 
         if (cp.ispwdweak(self.userpass.value)): 
             nps.notify_confirm(words['BadPassword'], words['Warning'])
+            self.userpass.value = None
+            self.passrepe.value = None
             return 
 
         # Check empty fields
@@ -232,6 +240,7 @@ class NewUserForm (nps.ActionFormV2):
                               "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['Warning'], words['Warning'])
+            self.ldap.value = None
             return 
 
         # Add user on main server
@@ -284,7 +293,7 @@ class NewUserForm (nps.ActionFormV2):
         self.parentApp.switchFormNow()
 
 
-class EditTempForm (nps.ActionFormV2):
+class EditUserPwdForm (nps.ActionFormV2):
     """Class that asks the username which has to be edited"""
 
     #~ Rename button using Italian language
@@ -293,20 +302,70 @@ class EditTempForm (nps.ActionFormV2):
     def create(self):
         self.show_atx = 66
         self.show_aty = 20
-        self.uname = self.add(nps.TitleText, name = words['Username'])
-
+        self.ldap  = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 20)
+        self.uname = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 20)
+        self.userpass = self.add(nps.TitlePassword, name = words['Password'], begin_entry_at = 20)
+        self.passrepe = self.add(nps.TitlePassword, name = words['PasswordRepet'], begin_entry_at = 20)
+  
     def on_cancel(self):
         """Discard edits and return to the main screen"""
-        self.uname.value = ""
         self.return_to_main_screen()
 
     def on_ok(self):
-        pass
+        # Check fields validity
+        if (self.ldap.value == ""):
+            nps.notify_confirm(words['Warning'], words['Warning'])
+            return 
+        if (self.uname.value == ""):
+            nps.notify_confim(words['Warning'], words['InsertUsername'])
+            return
+        if (self.userpass.value=="" or self.passrepe.value==""):
+            nps.notify_confirm(words['NullPassword'], words['Warning'])
+            self.userpass.value = None
+            self.passrepe.value = None
+            return 
+        if (self.userpass.value != self.passrepe.value):
+            nps.notify_confirm(words['WrongPassword'], words['Warning'])
+            self.userpass.value = None
+            self.passrepe.value = None
+            return 
+        if (cp.ispwdweak(self.userpass.value)): 
+            nps.notify_confirm(words['BadPassword'], words['Warning'])
+            self.userpass.value = None
+            self.passrepe.value = None
+            return 
+
+        # Check if this user exists
+        if(ldap.userexists(self.uname.value)):
+            pass
+        else:
+            errormsg = words['User']+self.uname.value+words['UserExist']
+            nps.notify_confirm(errormsg, words['Warning'], editw = 1)
+            return 
+
+        # Try to connect to LDAP database
+        try:
+            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/", 
+                              "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
+        except:
+            nps.notify_confirm(words['Warning'], words['Warning'])
+            self.ldap.value = None
+            return 
+
+        db.changepwd(self.uname.value,self.userpass.value)
+
+        nps.notify_confirm(words['PasswordEdited'], words['Warning'])
+
+        self.return_to_main_screen()
 
     def return_to_main_screen(self):
         """Return to the main screen"""
-        self.parentApp.setNextForm("MAIN")
+        self.ldap.value  = None
+        self.uname.value = None
+        self.userpass.value = None
+        self.passrepe.value = None
         self.editing = False
+        self.parentApp.setNextForm("MAIN")
         self.parentApp.switchFormNow()
 
 
@@ -319,8 +378,8 @@ class DelUserForm (nps.ActionFormV2):
     def create(self):
         self.show_atx = 66
         self.show_aty = 20
-        self.ldap  = self.add(nps.TitlePassword, name = words['Ldap'])
-        self.uname = self.add(nps.TitleText, name = words['Username'])
+        self.ldap  = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 20)
+        self.uname = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 20)
 
     def on_cancel(self):
         """Discard edits and return to the main screen"""
@@ -349,6 +408,7 @@ class DelUserForm (nps.ActionFormV2):
                               "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['Warning'], words['Warning'])
+            self.ldap.value = None
             return 
 
         # Ask to confirm you really want to delete this user 
@@ -420,7 +480,7 @@ class GUI (nps.NPSAppManaged):
         """Adds the forms"""
         self.addForm('MAIN', MainForm, name = words['AppTitle']) 
         self.addForm('NEWUSER', NewUserForm, name = words['AddUser'])
-        self.addForm('EDITTEMPFORM', EditTempForm, name = words['EditUser'], lines = 6, columns = 45)
-        self.addForm('DELUSER', DelUserForm, name = words['DeleteUser'], lines = 6, columns = 45)
-        self.addForm('RENEWUSER', RenewForm, name = words['RenewUser'], lines = 6, columns = 45)
+        self.addForm('EDITUSERPWDFORM', EditUserPwdForm, name = words['EditPassword'], lines = 10, columns = 70)
+        self.addForm('DELUSER', DelUserForm, name = words['DeleteUser'], lines = 10, columns = 70)
+        self.addForm('RENEWUSER', RenewForm, name = words['RenewUser'], lines = 10, columns = 70)
 
