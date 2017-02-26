@@ -2,29 +2,51 @@
 #
 # Author: andreatsh - andreatsh@lcm.mi.infn.it
 #
+#
+# [Password requirements]
+#
+# A good password should contain at least 8 characters including:
+#   - one uppercase letter
+#   - one lowercase letter
+#   - one digit or one special character (better if it contains both!)
+#
+# Warning: 
+#   The first and the last character do not count!
+#
+# You can also check if your password is based on strings such as user name, 
+# last name and/or user login.
+#
 
-from re import search as search   
+import re 
 import getpass
 
-def pwdpolicy():
-    print("")
-    print("Your password must have at least 8 characters including:")
-    print("\t- one uppercase letter")
-    print("\t- one lowercase letter")
-    print("\t- one digit or one special character (better if it contains both!)")
-    print("")
-    print("Warning: \n\tThe first and and the last character do not count!")
-    print("")
+def ispwdweak(pstring,s1=None,s2=None,s3=None):
 
-
-def ispwdweak(string):
-
-    if (len(string)<8): 
+    if (len(pstring)<8): 
         return True
 
-    pwd = string[1:-1]
-    if (search(r'[a-z]', pwd) and search(r'[A-Z]', pwd) and 
-        search(r'[0-9]', pwd) and search(r'[^A-Za-z0-9_]', pwd) ): 
+    pwd = pstring
+
+    if (re.search("\s",pwd)):
+        return True
+
+    if (s1!=None):
+        regex=re.sub("[aeiou]", ".", s1, flags=re.I) 
+        if (re.search(regex,pwd,flags=re.IGNORECASE)):
+            return True
+    if (s2!=None):
+        regex=re.sub("[aeiou]", ".", s2, flags=re.I) 
+        if (re.search(regex,pwd,flags=re.IGNORECASE)):
+            return True
+    if (s3!=None):
+        regex=re.sub("[aeiou]", ".", s3, flags=re.I) 
+        if (re.search(regex,pwd,flags=re.IGNORECASE)):
+            return True
+
+    pwd = pstring[1:-1]
+
+    if (re.search("[a-z]",pwd) and re.search("[A-Z]",pwd) and 
+        (re.search("[0-9]",pwd) and re.search("[^A-Za-z0-9_]",pwd))): 
         return False
     else: 
         return True
