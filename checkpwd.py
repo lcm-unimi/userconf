@@ -20,34 +20,34 @@
 import re 
 import getpass
 
-def ispwdweak(pstring,s1=None,s2=None,s3=None):
+def ispwdweak(pstring, s1=None, s2=None, s3=None):
 
     if (len(pstring)<8): 
-        return True
+        return True, 0
 
     pwd = pstring
 
-    if (re.search("\s",pwd)):
-        return True
+    if (re.search("\s", pwd)):
+        return True, 1
 
     if (s1!=None):
         regex=re.sub("[aeiou]", ".", s1, flags=re.I) 
-        if (re.search(regex,pwd,flags=re.IGNORECASE)):
-            return True
+        if (re.search(regex, pwd, flags=re.IGNORECASE)):
+            return True, 2
     if (s2!=None):
         regex=re.sub("[aeiou]", ".", s2, flags=re.I) 
-        if (re.search(regex,pwd,flags=re.IGNORECASE)):
-            return True
+        if (re.search(regex, pwd, flags=re.IGNORECASE)):
+            return True, 2
     if (s3!=None):
         regex=re.sub("[aeiou]", ".", s3, flags=re.I) 
-        if (re.search(regex,pwd,flags=re.IGNORECASE)):
-            return True
+        if (re.search(regex, pwd, flags=re.IGNORECASE)):
+            return True, 2
 
     pwd = pstring[1:-1]
 
-    if (re.search("[a-z]",pwd) and re.search("[A-Z]",pwd) and 
-        (re.search("[0-9]",pwd) and re.search("[^A-Za-z0-9_]",pwd))): 
-        return False
+    if (re.search("[a-z]", pwd) and re.search("[A-Z]", pwd) and 
+        (re.search("[0-9]", pwd) and re.search("[^A-Za-z0-9_]", pwd))): 
+        return False, 7
     else: 
-        return True
+        return True, 3
 
