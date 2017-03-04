@@ -11,7 +11,7 @@ import checkpwd as cp
 import lcmldap as ldap
 from os import system as system
 from re import search as search
-import pwd, time
+import pwd, smtplib, time
 
 #~ This dictionary is intended to contain every string of Userconf,
 #~ so it is easier to modify text and maintain the code compact
@@ -69,9 +69,15 @@ words = {
     'User'           : "The user ",
     'UserNotExist'   : " does not exist!",
     'UserExist'      : " already exists! ",
+    'RenewUser1'     : "Do you want to renew ",
+    'RenewUser2'     : "'s account until the day: ",
+    'MailSent'       : "Successfully sent mail!",
+    'MailNotSent'    : "Unable to sent mail!",
     'NewUserCreated' : "User successfully created!",
     'UserDeleted'    : "User successfully deleted!",
-    'PasswordEdited' : "User password successfully changed!"
+    'PasswordEdited' : "User's password successfully changed!",
+    'UserRenewed'    : "User's account successfully renewed!"
+
 }
 
 class MainForm ( nps.ActionFormWithMenus ):
@@ -328,7 +334,7 @@ class EditUserPwdForm (nps.ActionFormV2):
         if (search(r'[^A-Za-z0-9_]', self.nname.value)    or
             search(r'[^A-Za-z0-9_]', self.surname.value)  or
             search(r'[^A-Za-z0-9_]', self.username.value)):
-            nps.notify_confirm(words['BadChar'], words['Warning'], editw = 1)
+            nps.notify_confirm(words['BadChar'], words['Warning'])
             return
 
         # Check password
@@ -475,22 +481,96 @@ class RenewForm (nps.ActionFormV2):
     def create(self):
         self.show_atx = 66
         self.show_aty = 20
-        self.uname = self.add(nps.TitleText, name = words['Username'])
+        self.ldap  = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 20)
+        self.uname = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 20)
 
     def on_cancel(self):
         """Discard edits and return to the main screen"""
-        self.uname.value = ""
         self.return_to_main_screen()
 
     def on_ok(self):
-        #~ Check if user exist
+        # Check fields validity
+        if (self.ldap.value == ""):
+            nps.notify_confirm(words['LdapPassword'], words['Warning'])
+            return
         if (self.uname.value == ""):
             nps.notify_confirm(words['InsertUsername'], words['Warning'])
-        else:
+            return
+        if (search(r'[^A-Za-z0-9_]', self.uname.value)):
+            nps.notify_confirm(words['BadChar'], words['Warning'])
+            return
+
+        # Check if this user exists
+        if(ldap.userexists(self.uname.value)):
             pass
+        else:
+            errormsg = words['User']+self.uname.value+words['UserNotExist']
+            nps.notify_confirm(errormsg, words['Warning'], editw = 1)
+            return
+
+        # Try to connect to LDAP database
+        try:
+            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
+                              "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
+        except:
+            nps.notify_confirm(words['DBConnFail'], words['Warning'])
+            self.ldap.value = None
+            return
+
+        newday = time.gmtime(time.time()+3*86400*365)
+        newdaystr = time.strftime("%d/%m/%Y", newday)
+        # Convert in the right format for chage command
+        newshadow = time.strftime("%m/%d/%Y", newday)
+
+        text = words['RenewUser1'] + self.uname.value + words['RenewUser2'] 
+        text = text + newdaystr + "?" 
+
+        ren = nps.notify_yes_no(text, words['RenewUser'], editw = 2)
+        if (not ren):
+            self.return_to_main_screen()
+            return
+ 
+        cmd = "chage " + self.uname.value + " -E " + newshadow
+        expDate=str( (int(time.time())+3*86400*365) / 86400 )
+    
+        db.changeshadowexpire(self.uname.value, expDate)
+        system(cmd) 
+
+       
+        # Send mail to user 
+        sender    = 'staff@lcm.mi.infn.it'
+        usermail  = self.uname.value + "@lcm.mi.infn.it"
+        receivers = [ usermail, 'working@lcm.mi.infn.it' ]
+
+        message = """From: <staff@lcm.mi.infn.it>
+To: """ + usermail + """
+Subject: Rinnovo account LCM
+Reply-to: <working@lcm.mi.infn.it>
+
+Ciao, 
+
+abbiamo rinnovato il tuo account.
+Nuova data di scadenza: """ + newdaystr + """
+
+A presto,
+LCM Staff
+"""
+
+        try:
+            smtpObj = smtplib.SMTP('localhost')
+            smtpObj.sendmail(sender, receivers, message)         
+            nps.notify_confirm(words['MailSent'], words['Warning'])
+        except smtplib.SMTPException:
+            nps.notify_confirm(words['MailNotSent'], words['Warning'])
+
+        nps.notify_confirm(words['UserRenewed'], words['Warning'])
+        self.return_to_main_screen()
+
 
     def return_to_main_screen(self):
         """Return to the main screen"""
+        self.ldap.value  = None
+        self.uname.value = None
         self.parentApp.setNextForm("MAIN")
         self.editing = False
         self.parentApp.switchFormNow()
