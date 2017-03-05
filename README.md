@@ -12,6 +12,6 @@ umanager.py import:
 * lcmldap.py to manage connections with LDAP database
 
 ## Prerequisites
-Requires npyscreen >= 4.4.0
-Requires superuser privileges.
+* Requires npyscreen >= 4.4.0
+* Requires superuser privileges.
 
