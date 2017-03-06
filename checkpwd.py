@@ -46,7 +46,7 @@ def ispwdweak(pstring, s1=None, s2=None, s3=None):
     pwd = pstring[1:-1]
 
     if (re.search("[a-z]", pwd) and re.search("[A-Z]", pwd) and 
-        (re.search("[0-9]", pwd) and re.search("[^A-Za-z0-9_]", pwd))): 
+        (re.search("[0-9]", pwd) or re.search("[^A-Za-z0-9_]", pwd))): 
         return False, 7
     else: 
         return True, 3
