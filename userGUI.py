@@ -3,7 +3,7 @@
 # Author:       Gabriele Bozzola (sbozzolo)
 # Email:        sbozzolator@gmail.com
 # Date:         28.04.2016
-# Last Edit:    18.02.2017 (andreatsh)
+# Last Edit:    06.03.2017 (andreatsh)
 
 #~ This module is used to draw the interface
 import npyscreen as nps
@@ -40,7 +40,7 @@ words = {
     'PasswordRepet'  : "Retype Password",
     'AppTitle'       : "LCM Userconf",
     'About'          : "About",
-    'AboutApp'       : "Userconf version 0.6.1",
+    'AboutApp'       : "Userconf version 1.0.0",
     'ReturnToMain'   : "BackToMenu",
     'LdapPassword'   : "Enter LDAP password!",
     'NullPassword'   : "Enter a valid password!",
@@ -226,8 +226,8 @@ class NewUserForm (nps.ActionFormV2):
             return
 
         # Check if fields contains bad chars
-        if (search(r'[^A-Za-z0-9_]', self.nname.value)    or
-            search(r'[^A-Za-z0-9_]', self.surname.value)  or
+        if (search(r'[^A-Za-z0-9_\s]', self.nname.value)    or
+            search(r'[^A-Za-z0-9_\s]', self.surname.value)  or
             search(r'[^A-Za-z0-9_]', self.username.value) or
             search(r'[^A-Za-z0-9_]', self.badgenum.value)):
             nps.notify_confirm(words['BadChar'], words['Warning'], editw = 1)
@@ -242,7 +242,7 @@ class NewUserForm (nps.ActionFormV2):
 
         try:
             db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
-                              "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
+                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['DBConnFail'], words['Warning'])
             self.ldap.value = None
@@ -254,17 +254,22 @@ class NewUserForm (nps.ActionFormV2):
             if (i.pw_uid<64000): templist.append(i.pw_uid)
         useruidNo=str( max(templist)+1 )
         expDate=str( (int(time.time())+3*86400*365) / 86400 )
-        addusercmd="useradd -u "+useruidNo+                            \
-                   " -c "+self.nname.value+",,,,"+self.badgenum.value+ \
-                   " -d /home/"+self.username.value+                   \
-                   " -g users -m -s /bin/bash"+                        \
-                   " -e "+expDate+" "+self.username.value
+        addusercmd='useradd -u '+useruidNo+                                 \
+                   ' -c "'+self.nname.value+',,,,'+self.badgenum.value+'"'+ \
+                   ' -d /home/'+self.username.value+                        \
+                   ' -g users -m -s /bin/bash'+                             \
+                   ' -e '+expDate+' '+self.username.value
 
-        system(addusercmd)
+        try: 
+            system(addusercmd)
+        except:
+            nps.notify_confirm(words['Warning'], words['Warneng'])
+            return
 
         # Add user to LDAP database
         db.adduser(self.nname.value,self.surname.value,self.username.value,
                    self.userpass.value,expDate,useruidNo,self.badgenum.value)
+        
 
         # Configure user's mail
         mforwardfile="/home/"+self.username.value+"/.forward"
@@ -375,7 +380,7 @@ class EditUserPwdForm (nps.ActionFormV2):
         # Try to connect to LDAP database
         try:
             db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
-                              "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
+                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['DBConnFail'], words['Warning'])
             self.ldap.value = None
@@ -428,14 +433,14 @@ class DelUserForm (nps.ActionFormV2):
         if(ldap.userexists(self.uname.value)):
             pass
         else:
-            errormsg = words['User']+self.uname.value+words['UserExist']
+            errormsg = words['User']+self.uname.value+words['UserNotExist']
             nps.notify_confirm(errormsg, words['Warning'], editw = 1)
             return
 
         # Try to connect to LDAP database
         try:
             db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
-                              "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
+                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['DBConnFail'], words['Warning'])
             self.ldap.value = None
@@ -511,7 +516,7 @@ class RenewForm (nps.ActionFormV2):
         # Try to connect to LDAP database
         try:
             db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
-                              "cn=Manager,dc=xx8,dc=xx1", self.ldap.value)
+                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['DBConnFail'], words['Warning'])
             self.ldap.value = None
