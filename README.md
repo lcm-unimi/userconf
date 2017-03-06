@@ -1,18 +1,17 @@
-# userconf
-Suit for ldap users management
+# umanager
+umanager is a python script to manage users accounts.
 
-userconf e' uno script in Python per gestire gli utenti in un database 
-LDAP. Il modulo su cui si basa e' npyscreen, scelto rispetto
-curses e urwin in quanto di livello piu' alto e con un codice sorgente
-semplice e accessibile che unitamente alla ricca documentazione permette
-di prendere dimistichezza con le funzioni in poco tempo.
+umanager is designed to:
+* create users accounts on our main server and add it to a LDAP database
+* delete users accounts from main server and LDAP database
+* change users password in LDAP database
+* renew users shadow expire date
 
-Attualmente userGUI non implementa nessuna funzione di userconf ma e'
-solo una GUI (che gira in console) parzialmente funzionante.
+umanager.py import:
+* userGUI.py to manage the graphical user interface
+* lcmldap.py to manage connections with LDAP database
 
-Lo script userconf.py importa userGUI che definisce le funzioni per 
-disegnare l'interfaccia grafica, mentre lcmldap si occupa di gestire la 
-connessione e le funzioni legate al database ldap.
+## Prerequisites
+* Requires npyscreen >= 4.4.0
+* Requires superuser privileges.
 
-
-Richiede npyscreen >= 4.4.0
