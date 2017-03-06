@@ -9,15 +9,15 @@ import pwd, sys, time
 
 # Class to manage LDAP
 class lcmldap():
-    def __init__(self, uri, bind, secret):
+    def __init__(self, uri, cn, dc, secret):
         self.conn   = None
         self.uri    = uri
-        self.bind   = bind
+        self.dc     = dc
         self.secret = secret
         try:
             self.conn = ldap.initialize(self.uri)
             self.conn.protocol_version = ldap.VERSION3
-            self.conn.simple_bind_s(self.bind,self.secret)
+            self.conn.simple_bind_s(cn+","+self.dc,self.secret)
             print("Connection established.")
         except ldap.INVALID_CREDENTIALS:
             print("Your username or password is incorrect.")
@@ -36,7 +36,7 @@ class lcmldap():
             print("User %s already exist!", username)
             return
 
-        dn = "uid="+username+",ou=People,dc=xx8,dc=xx1"
+        dn = "uid="+username+",ou=People,"+self.dc
 
         attrs = {}
         attrs['uid']            = username
@@ -68,7 +68,7 @@ class lcmldap():
         self.conn.add_s(dn,ldif)
 
     def searchuserbyuid(self, username):
-        baseDN       = "ou=People,dc=xx8,dc=xx1"
+        baseDN       = "ou=People,"+self.dc
         searchScope  = ldap.SCOPE_SUBTREE
         searchFilter = "uid="+username
 
@@ -87,7 +87,7 @@ class lcmldap():
             print("User %s does not exist!", username)
             return
 
-        dn = "uid="+username+",ou=People,dc=xx8,dc=xx1"
+        dn = "uid="+username+",ou=People,"+self.dc
         try:
             self.conn.passwd( dn, None, newsecret )
         except ldap.LDAPError as e:
@@ -98,7 +98,7 @@ class lcmldap():
             print("User %s does not exist!", username)
             return
 
-        dn = "uid="+username+",ou=People,dc=xx8,dc=xx1"
+        dn = "uid="+username+",ou=People,"+self.dc
         ldif = [( ldap.MOD_REPLACE, 'shadowExpire', shexp )]
         try:
             self.conn.modify_s(dn, ldif)
@@ -110,7 +110,7 @@ class lcmldap():
             print("User %s does not exist!", username)
             return
 
-        dn = "uid="+username+",ou=People,dc=xx8,dc=xx1"
+        dn = "uid="+username+",ou=People,"+self.dc
         try:
             self.conn.delete_s(dn)
         except ldap.LDAPError as e:
