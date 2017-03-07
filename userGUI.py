@@ -17,7 +17,7 @@ import pwd, smtplib, time
 #~ so it is easier to modify text and maintain the code compact
 
 words = {
-    'MainFormName'   : "Welcome to Userconf",
+    'MainFormName'   : "Welcome to Umanager",
     'ExitText'       : "Quit",
     'MenuButtonText' : "Menu",
     'MainFormText1'  : "This script allows you to perform "
