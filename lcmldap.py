@@ -32,7 +32,7 @@ class lcmldap():
         self.conn.unbind_s()
 
     def adduser(self, name, surname, username, usersecret, expireDate, uidNo, badgenum):
-        if (self.searchuserbyuid(username) ):
+        if (self.userexistsbyuid(username) ):
             print("User %s already exist!", username)
             return
 
@@ -67,7 +67,7 @@ class lcmldap():
         # Do the actual synchronous add-operation to the ldapuri
         self.conn.add_s(dn,ldif)
 
-    def searchuserbyuid(self, username):
+    def userexistsbyuid(self, username):
         baseDN       = "ou=People,"+self.dc
         searchScope  = ldap.SCOPE_SUBTREE
         searchFilter = "uid="+username
@@ -82,8 +82,28 @@ class lcmldap():
             print(e)
             return False
 
+    def getusercredbyuid(self, username):
+        baseDN         = "ou=People,"+self.dc
+        searchScope    = ldap.SCOPE_SUBTREE
+        searchFilter   = "uid="+username
+        searchAttrList = ["givenName","sn"]
+
+        try:
+            # Result is a list of touple (one for each match) of dn and attrs.
+            # Attrs is a dict, each value is a list of string.
+            result = self.conn.search_s(baseDN, searchScope, searchFilter, searchAttrList)
+            if ( result==[] ):
+                print("User %s does not exist!", username)
+                return 
+            result = [value[0] for value in result[0][1].values()]
+            # Returns 2-element list, name and surname
+            return result
+        except ldap.LDAPError as e:
+            print(e)
+            return 
+
     def changepwd(self, username, newsecret):
-        if (not self.searchuserbyuid(username) ):
+        if (not self.userexistsbyuid(username) ):
             print("User %s does not exist!", username)
             return
 
@@ -94,7 +114,7 @@ class lcmldap():
             print("Error: Can\'t change %s password: %s" % (username, e.message['desc']))
 
     def changeshadowexpire(self, username, shexp):
-        if (not self.searchuserbyuid(username)):
+        if (not self.userexistsbyuid(username)):
             print("User %s does not exist!", username)
             return
 
@@ -106,7 +126,7 @@ class lcmldap():
             print("Error: Can\'t change %s shadowExpire: %s" % (username, e.message['desc']))
 
     def deluser(self, username):
-        if (not self.searchuserbyuid(username) ):
+        if (not self.userexistsbyuid(username) ):
             print("User %s does not exist!", username)
             return
 
