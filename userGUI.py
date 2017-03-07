@@ -13,7 +13,7 @@ from os import system as system
 from re import search as search
 import pwd, smtplib, time
 
-#~ This dictionary is intended to contain every string of Userconf,
+#~ This dictionary is intended to contain every string of Umanager,
 #~ so it is easier to modify text and maintain the code compact
 
 words = {
@@ -27,9 +27,9 @@ words = {
     'AddUser'        : "Add User",
     'EditPassword'   : "Edit Password",
     'DeleteUser'     : "Delete User",
-    'AboutUserconf'  : "About Userconf",
+    'AboutUmanager'  : "About Umanager",
     'ConfirmExit'    : "Do you reallly want to quit?",
-    'ExitUserconf'   : "Quit Userconf",
+    'ExitUmanager'   : "Quit Umanager",
     'Ldap'           : "Ldap password",
     'Name'           : "First name",
     'Surname'        : "Last name",
@@ -38,9 +38,9 @@ words = {
     'Email'          : "Email",
     'Password'       : "Enter Password",
     'PasswordRepet'  : "Retype Password",
-    'AppTitle'       : "LCM Userconf",
+    'AppTitle'       : "LCM Umanager",
     'About'          : "About",
-    'AboutApp'       : "Userconf version 1.0.0",
+    'AboutApp'       : "Umanager version 1.0.0",
     'ReturnToMain'   : "BackToMenu",
     'LdapPassword'   : "Enter LDAP password!",
     'NullPassword'   : "Enter a valid password!",
@@ -81,7 +81,7 @@ words = {
 }
 
 class MainForm ( nps.ActionFormWithMenus ):
-    """Class that draws the main screen of Userconf"""
+    """Class that draws the main screen of Umanager"""
 
     #~ Define a shortcut to open menu
     MENU_KEY = "m"
@@ -103,8 +103,8 @@ class MainForm ( nps.ActionFormWithMenus ):
         self.menu.addItem(words['EditPassword'], self.edit_user, "p")
         self.menu.addItem(words['RenewUser'], self.renew_user, "r")
         self.menu.addItem(words['DeleteUser'], self.delete_user, "d")
-        self.menu.addItem(words['AboutUserconf'], self.about, "a")
-        self.menu.addItem(words['ExitUserconf'], self.exit_application, "e")
+        self.menu.addItem(words['AboutUmanager'], self.about, "a")
+        self.menu.addItem(words['ExitUmanager'], self.exit_application, "e")
 
     def on_cancel(self):
         """Displays the main menu when the button cancel is pressed"""
@@ -119,7 +119,7 @@ class MainForm ( nps.ActionFormWithMenus ):
             pass #~ Do nothing
 
     def about(self):
-        """Displys info about the Userconf script"""
+        """Displys info about the Umanager script"""
         nps.notify_confirm(words['AboutApp'], words['About'], editw=1)
 
     def exit_application(self):
