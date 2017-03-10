@@ -3,7 +3,7 @@
 # Author:       Gabriele Bozzola (sbozzolo)
 # Email:        sbozzolator@gmail.com
 # Date:         28.04.2016
-# Last Edit:    06.03.2017 (andreatsh)
+# Last Edit:    10.03.2017 (andreatsh)
 
 #~ This module is used to draw the interface
 import npyscreen as nps
@@ -71,6 +71,7 @@ words = {
     'UserExist'      : " already exists! ",
     'RenewUser1'     : "Do you want to renew ",
     'RenewUser2'     : "'s account until the day: ",
+    'SendMailToUser' : "Do you want to send an email to the user?",
     'MailSent'       : "Successfully sent mail!",
     'MailNotSent'    : "Unable to sent mail!",
     'NewUserCreated' : "User successfully created!",
@@ -542,12 +543,14 @@ class RenewForm (nps.ActionFormV2):
         system(cmd) 
 
        
-        # Send mail to user 
-        sender    = 'staff@lcm.mi.infn.it'
-        usermail  = self.uname.value + "@lcm.mi.infn.it"
-        receivers = [ usermail, 'working@lcm.mi.infn.it' ]
+        # Ask to send mail to user 
+        sm = nps.notify_yes_no(words['SendMailToUser'], editw = 2)
+        if (sm):
+            sender    = 'staff@lcm.mi.infn.it'
+            usermail  = self.uname.value + "@lcm.mi.infn.it"
+            receivers = [ usermail, 'working@lcm.mi.infn.it' ]
 
-        message = """From: <staff@lcm.mi.infn.it>
+            message = """From: <staff@lcm.mi.infn.it>
 To: """ + usermail + """
 Subject: Rinnovo account LCM
 Reply-to: <working@lcm.mi.infn.it>
@@ -561,12 +564,12 @@ A presto,
 LCM Staff
 """
 
-        try:
-            smtpObj = smtplib.SMTP('localhost')
-            smtpObj.sendmail(sender, receivers, message)         
-            nps.notify_confirm(words['MailSent'], words['Warning'])
-        except smtplib.SMTPException:
-            nps.notify_confirm(words['MailNotSent'], words['Warning'])
+            try:
+                smtpObj = smtplib.SMTP('localhost')
+                smtpObj.sendmail(sender, receivers, message)         
+                nps.notify_confirm(words['MailSent'], words['Warning'])
+            except smtplib.SMTPException:
+                nps.notify_confirm(words['MailNotSent'], words['Warning'])
 
         nps.notify_confirm(words['UserRenewed'], words['Warning'])
         self.return_to_main_screen()
