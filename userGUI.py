@@ -244,8 +244,8 @@ class NewUserForm (nps.ActionFormV2):
         # else no user with chosen username exists: do nothing
 
         try:
-            db = ldap.lcmldap("ldaps://xx88.xx1.mi.infn.it/",
-                              "cn=Manager","dc=xx88,dc=xx1", self.ldap.value)
+            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
+                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['DBConnFail'], words['Warning'])
             self.ldap.value = None
@@ -434,8 +434,8 @@ class DelUserForm (nps.ActionFormV2):
 
         # Try to connect to LDAP database
         try:
-            db = ldap.lcmldap("ldaps://xx88.xx1.mi.infn.it/",
-                              "cn=Manager","dc=xx88,dc=xx1", self.ldap.value)
+            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
+                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['DBConnFail'], words['Warning'])
             self.ldap.value = None
@@ -510,8 +510,8 @@ class RenewForm (nps.ActionFormV2):
 
         # Try to connect to LDAP database
         try:
-            db = ldap.lcmldap("ldaps://xx88.xx1.mi.infn.it/",
-                              "cn=Manager","dc=xx88,dc=xx1", self.ldap.value)
+            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
+                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
         except:
             nps.notify_confirm(words['DBConnFail'], words['Warning'])
             self.ldap.value = None
