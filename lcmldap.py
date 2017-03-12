@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # Author: andreatsh - andreatsh@lcm.mi.infn.it
-#
+# Last Edit : 12.03.2017 (silva)
 
 import ldap
 import ldap.modlist as modlist
