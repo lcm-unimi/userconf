@@ -3,7 +3,8 @@
 # Author:       Gabriele Bozzola (sbozzolo)
 # Email:        sbozzolator@gmail.com
 # Date:         28.04.2016
-# Last Edit:    10.03.2017 (andreatsh)
+# Last Edit:    12.03.2017 (silva)
+
 
 #~ This module is used to draw the interface
 import npyscreen as nps
@@ -11,6 +12,7 @@ import checkpwd as cp
 import lcmldap as ldap
 from os import system as system
 from re import search as search
+from re import sub
 import pwd, smtplib, time
 
 #~ This dictionary is intended to contain every string of Umanager,
@@ -191,8 +193,10 @@ class NewUserForm (nps.ActionFormV2):
             self.passrepe.value = None
             return
 
-        tp = cp.ispwdweak(self.userpass.value,self.nname.value,
-                          self.surname.value,self.username.value)
+        tp = cp.ispwdweak(self.userpass.value,               \
+                          sub('\s','',self.nname.value),     \
+                          sub('\s','',self.surname.value),   \
+                          self.username.value)
         if (tp[0]):
             if (tp[1]==0):
                 nps.notify_confirm(words['BadPassword0'], words['Warning'])
@@ -229,7 +233,7 @@ class NewUserForm (nps.ActionFormV2):
         # Check if fields contains bad chars
         if (search(r'[^A-Za-z0-9_\s]', self.nname.value)    or
             search(r'[^A-Za-z0-9_\s]', self.surname.value)  or
-            search(r'[^A-Za-z0-9_]', self.username.value) or
+            search(r'[^A-Za-z0-9_]', self.username.value)   or
             search(r'[^A-Za-z0-9_]', self.badgenum.value)):
             nps.notify_confirm(words['BadChar'], words['Warning'], editw = 1)
             return
@@ -312,8 +316,6 @@ class EditUserPwdForm (nps.ActionFormV2):
         self.show_atx = 66
         self.show_aty = 20
         self.ldap     = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 20)
-        self.nname    = self.add(nps.TitleText, name = words['Name'], begin_entry_at = 20)
-        self.surname  = self.add(nps.TitleText, name = words['Surname'], begin_entry_at = 20)
         self.username = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 20)
         self.userpass = self.add(nps.TitlePassword, name = words['Password'], begin_entry_at = 20)
         self.passrepe = self.add(nps.TitlePassword, name = words['PasswordRepet'], begin_entry_at = 20)
@@ -327,21 +329,32 @@ class EditUserPwdForm (nps.ActionFormV2):
         if (self.ldap.value == ""):
             nps.notify_confirm(words['LdapPassword'], words['Warning'])
             return
-        if (self.nname.value == ""):
-            nps.notify_confim(words['InsertName'], words['Warning'])
-            return
-        if (self.surname.value == ""):
-            nps.notify_confim(words['InsertSurname'], words['Warning'])
-            return
         if (self.username.value == ""):
             nps.notify_confim(words['InsertUsername'], words['Warning'])
             return
         # Check if fields contains bad chars
-        if (search(r'[^A-Za-z0-9_]', self.nname.value)    or
-            search(r'[^A-Za-z0-9_]', self.surname.value)  or
-            search(r'[^A-Za-z0-9_]', self.username.value)):
+        if(search(r'[^A-Za-z0-9_]', self.username.value)):
             nps.notify_confirm(words['BadChar'], words['Warning'])
             return
+
+        # Try to connect to LDAP database
+        try:
+            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
+                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
+        except:
+            nps.notify_confirm(words['DBConnFail'], words['Warning'])
+            self.ldap.value = None
+            return
+
+	# Check if this user exists
+        if(ldap.userexists(self.username.value)):
+            pass
+        else:
+            errormsg = words['User']+self.username.value+words['UserNotExist']
+            nps.notify_confirm(errormsg, words['Warning'], editw = 1)
+            return
+
+        nname, surname = db.getusercredbyuid(self.username.value)
 
         # Check password
         if (self.userpass.value=="" or self.passrepe.value==""):
@@ -355,8 +368,10 @@ class EditUserPwdForm (nps.ActionFormV2):
             self.passrepe.value = None
             return
 
-        tp = cp.ispwdweak(self.userpass.value,self.nname.value,
-                          self.surname.value,self.username.value)
+        tp = cp.ispwdweak(self.userpass.value,    \
+                          sub('\s','',nname),     \
+                          sub('\s','',surname),   \
+                          self.username.value)
         if (tp[0]):
             if (tp[1]==0):
                 nps.notify_confirm(words['BadPassword0'], words['Warning'])
@@ -370,23 +385,6 @@ class EditUserPwdForm (nps.ActionFormV2):
             self.passrepe.value = None
             return
 
-        # Check if this user exists
-        if(ldap.userexists(self.username.value)):
-            pass
-        else:
-            errormsg = words['User']+self.username.value+words['UserExist']
-            nps.notify_confirm(errormsg, words['Warning'], editw = 1)
-            return
-
-        # Try to connect to LDAP database
-        try:
-            db = ldap.lcmldap("ldaps://xx8.xx1.mi.infn.it/",
-                              "cn=Manager","dc=xx8,dc=xx1", self.ldap.value)
-        except:
-            nps.notify_confirm(words['DBConnFail'], words['Warning'])
-            self.ldap.value = None
-            return
-
         db.changepwd(self.username.value,self.userpass.value)
 
         nps.notify_confirm(words['PasswordEdited'], words['Warning'])
@@ -396,8 +394,6 @@ class EditUserPwdForm (nps.ActionFormV2):
     def return_to_main_screen(self):
         """Return to the main screen"""
         self.ldap.value  = None
-        self.nname.value = None
-        self.surname.value = None
         self.username.value = None
         self.userpass.value = None
         self.passrepe.value = None
