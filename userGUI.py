@@ -3,7 +3,7 @@
 # Author:       Gabriele Bozzola (sbozzolo)
 # Email:        sbozzolator@gmail.com
 # Date:         28.04.2016
-# Last Edit:    12.03.2017 (silva)
+# Last Edit:    14.03.2017 (silva)
 
 #~ This module is used to draw the interface
 import npyscreen as nps
@@ -12,7 +12,7 @@ import lcmldap as ldap
 from os import system as system
 from re import search as search
 from re import sub
-import pwd, smtplib, time
+import pwd, smtplib, time, os, sys
 
 #~ This dictionary is intended to contain every string of Umanager,
 #~ so it is easier to modify text and maintain the code compact
@@ -81,6 +81,13 @@ words = {
     'UserRenewed'    : "User's account successfully renewed!"
 
 }
+
+def get_term_size() :
+    return tuple(map(int , os.popen('stty size').read().strip().split() ) )
+
+def get_mid_point(col, lin) :
+    ty, tx = get_term_size()
+    return map(int, [(tx-col)/2, (ty-lin)/2 ])
 
 class MainForm ( nps.ActionFormWithMenus ):
     """Class that draws the main screen of Umanager"""
@@ -312,8 +319,7 @@ class EditUserPwdForm (nps.ActionFormV2):
     CANCEL_BUTTON_TEXT  = words['ReturnToMain']
 
     def create(self):
-        self.show_atx = 66
-        self.show_aty = 20
+        self.show_atx, self.show_aty = get_mid_point(self.columns, self.lines)
         self.ldap     = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 20)
         self.username = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 20)
         self.userpass = self.add(nps.TitlePassword, name = words['Password'], begin_entry_at = 20)
@@ -407,8 +413,7 @@ class DelUserForm (nps.ActionFormV2):
     CANCEL_BUTTON_TEXT  = words['ReturnToMain']
 
     def create(self):
-        self.show_atx = 66
-        self.show_aty = 20
+        self.show_atx, self.show_aty = get_mid_point(self.columns, self.lines)
         self.ldap  = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 20)
         self.uname = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 20)
 
@@ -480,8 +485,7 @@ class RenewForm (nps.ActionFormV2):
     CANCEL_BUTTON_TEXT  = words['ReturnToMain']
 
     def create(self):
-        self.show_atx = 66
-        self.show_aty = 20
+        self.show_atx, self.show_aty = get_mid_point(self.columns, self.lines)
         self.ldap  = self.add(nps.TitlePassword, name = words['Ldap'], begin_entry_at = 20)
         self.uname = self.add(nps.TitleText, name = words['Username'], begin_entry_at = 20)
 
