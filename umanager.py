@@ -12,7 +12,7 @@ if ( __name__ == "__main__" ):
     
     tx,ty = userGUI.get_term_size()
     if (tx<28 or ty<96):
-        print("\033[91m[ERROR]: Your terminal is too small. Quit.")
+        print("\033[91m[ERROR]:\033[0m Your terminal is too small. Quit.")
         exit(1)
 
     # Enable debug mode:
@@ -21,10 +21,10 @@ if ( __name__ == "__main__" ):
         if (sys.argv[1]=="-d" or sys.argv[1]=="-D"):
             gui = userGUI.GUI().run()
         else:
-            print("\033[91m[ERROR]: Invalid argument. Quit.")
+            print("\033[91m[ERROR]:\033[0m Invalid argument. Quit.")
     else:
         if (os.getuid()==0):
 	        gui = userGUI.GUI().run()
         else:
-            print("\033[91m[ERROR]: You're not superuser. Quit.")
+            print("\033[91m[ERROR]:\033[0m You're not superuser. Quit.")
 

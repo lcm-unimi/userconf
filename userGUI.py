@@ -25,12 +25,12 @@ words = {
                        +"actions on LCM users database. ",
     'MainFormText2'  : "To open the menu press 'm' or select MENU",
     'MainMenu'       : "Main Menu",
-    'AddUser'        : "Add User",
-    'EditPassword'   : "Edit Password",
+    'NewUser'        : "New User",
+    'ChangePassword' : "Change Password",
     'DeleteUser'     : "Delete User",
     'AboutUmanager'  : "About Umanager",
     'ConfirmExit'    : "Do you reallly want to quit?",
-    'ExitUmanager'   : "Quit Umanager",
+    'QuitUmanager'   : "Quit Umanager",
     'Ldap'           : "Ldap password",
     'Name'           : "First name",
     'Surname'        : "Last name",
@@ -83,6 +83,8 @@ words = {
 }
 
 def get_term_size() :
+    # Stty returns cols and rows. Read the only line (e.g. '50 150') and properly
+    # convert it to a list of integer.
     return tuple(map(int , os.popen('stty size').read().strip().split() ) )
 
 def get_mid_point(col, lin) :
@@ -108,12 +110,12 @@ class MainForm ( nps.ActionFormWithMenus ):
 
         #~ Main Menu and Edit User menu
         self.menu = self.new_menu(name = words['MainMenu'], shortcut = "m")
-        self.menu.addItem(words['AddUser'], self.new_user, "n")
-        self.menu.addItem(words['EditPassword'], self.edit_user, "p")
+        self.menu.addItem(words['NewUser'], self.new_user, "n")
+        self.menu.addItem(words['ChangePassword'], self.edit_user, "c")
         self.menu.addItem(words['RenewUser'], self.renew_user, "r")
         self.menu.addItem(words['DeleteUser'], self.delete_user, "d")
         self.menu.addItem(words['AboutUmanager'], self.about, "a")
-        self.menu.addItem(words['ExitUmanager'], self.exit_application, "e")
+        self.menu.addItem(words['QuitUmanager'], self.exit_application, "q")
 
     def on_cancel(self):
         """Displays the main menu when the button cancel is pressed"""
@@ -589,7 +591,7 @@ class GUI (nps.NPSAppManaged):
     def onStart(self):
         """Adds the forms"""
         self.addForm('MAIN', MainForm, name = words['AppTitle'])
-        self.addForm('NEWUSER', NewUserForm, name = words['AddUser'])
-        self.addForm('EDITUSERPWDFORM', EditUserPwdForm, name = words['EditPassword'], lines = 10, columns = 70)
+        self.addForm('NEWUSER', NewUserForm, name = words['NewUser'])
+        self.addForm('EDITUSERPWDFORM', EditUserPwdForm, name = words['ChangePassword'], lines = 10, columns = 70)
         self.addForm('DELUSER', DelUserForm, name = words['DeleteUser'], lines = 10, columns = 70)
         self.addForm('RENEWUSER', RenewForm, name = words['RenewUser'], lines = 10, columns = 70)
