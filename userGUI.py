@@ -2,8 +2,6 @@
 
 # Author:       Gabriele Bozzola (sbozzolo)
 # Email:        sbozzolator@gmail.com
-# Date:         28.04.2016
-# Last Edit:    14.03.2017 (silva)
 
 #~ This module is used to draw the interface
 import npyscreen as nps
