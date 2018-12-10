@@ -2,8 +2,6 @@
 
 # Author:       Gabriele Bozzola (sbozzolo)
 # Email:        sbozzolator@gmail.com
-# Date:         28.04.2016
-# Last Edit:    14.03.2017 (silva)
 
 #~ This module is used to draw the interface
 import npyscreen as nps
@@ -241,7 +239,7 @@ class NewUserForm (nps.ActionFormV2):
         # Check if fields contains bad chars
         if (search(r'[^A-Za-z0-9_\s]', self.nname.value)    or
             search(r'[^A-Za-z0-9_\s]', self.surname.value)  or
-            search(r'[^A-Za-z0-9_]', self.username.value)   or
+            search(r'[^a-z0-9_]', self.username.value)   or
             search(r'[^A-Za-z0-9_]', self.badgenum.value)):
             nps.notify_confirm(words['BadChar'], words['Warning'], editw = 1)
             return
@@ -273,7 +271,7 @@ class NewUserForm (nps.ActionFormV2):
                    ' -g users -m -s /bin/bash'+                             \
                    ' -e '+expDate+' '+self.username.value
 
-        try: 
+        try:
             system(addusercmd)
         except:
             nps.notify_confirm(words['Warning'], words['Warneng'])
@@ -282,7 +280,7 @@ class NewUserForm (nps.ActionFormV2):
         # Add user to LDAP database
         db.adduser(self.nname.value,self.surname.value,self.username.value,
                    self.userpass.value,expDate,useruidNo,self.badgenum.value)
-        
+
 
         # Configure user's mail
         mforwardfile="/home/"+self.username.value+"/.forward"
@@ -529,22 +527,22 @@ class RenewForm (nps.ActionFormV2):
         # Convert in the right format for chage command
         newshadow = time.strftime("%m/%d/%Y", newday)
 
-        text = words['RenewUser1'] + self.uname.value + words['RenewUser2'] 
-        text = text + newdaystr + "?" 
+        text = words['RenewUser1'] + self.uname.value + words['RenewUser2']
+        text = text + newdaystr + "?"
 
         ren = nps.notify_yes_no(text, words['RenewUser'], editw = 2)
         if (not ren):
             self.return_to_main_screen()
             return
- 
+
         cmd = "chage " + self.uname.value + " -E " + newshadow
         expDate=str( (int(time.time())+3*86400*365) / 86400 )
-    
-        db.changeshadowexpire(self.uname.value, expDate)
-        system(cmd) 
 
-       
-        # Ask to send mail to user 
+        db.changeshadowexpire(self.uname.value, expDate)
+        system(cmd)
+
+
+        # Ask to send mail to user
         sm = nps.notify_yes_no(words['SendMailToUser'], editw = 2)
         if (sm):
             sender    = 'staff@lcm.mi.infn.it'
@@ -556,7 +554,7 @@ To: """ + usermail + """
 Subject: Rinnovo account LCM
 Reply-to: <working@lcm.mi.infn.it>
 
-Ciao, 
+Ciao,
 
 abbiamo rinnovato il tuo account.
 Nuova data di scadenza: """ + newdaystr + """
@@ -567,7 +565,7 @@ LCM Staff
 
             try:
                 smtpObj = smtplib.SMTP('localhost')
-                smtpObj.sendmail(sender, receivers, message)         
+                smtpObj.sendmail(sender, receivers, message)
                 nps.notify_confirm(words['MailSent'], words['Warning'])
             except smtplib.SMTPException:
                 nps.notify_confirm(words['MailNotSent'], words['Warning'])

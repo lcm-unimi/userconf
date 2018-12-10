@@ -1,7 +1,6 @@
 #!/usr/bin/python
 #
 # Author: andreatsh - andreatsh@lcm.mi.infn.it
-# Last Edit : 12.03.2017 (silva)
 
 import ldap
 import ldap.modlist as modlist
@@ -94,13 +93,13 @@ class lcmldap():
             result = self.conn.search_s(baseDN, searchScope, searchFilter, searchAttrList)
             if ( result==[] ):
                 print("User %s does not exist!", username)
-                return 
+                return
             result = [value[0] for value in result[0][1].values()]
             # Returns 2-element list, name and surname
             return result
         except ldap.LDAPError as e:
             print(e)
-            return 
+            return
 
     def changepwd(self, username, newsecret):
         if (not self.userexistsbyuid(username) ):

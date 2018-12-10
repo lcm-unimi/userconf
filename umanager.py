@@ -2,14 +2,12 @@
 
 # Author: 		Gabriele Bozzola (sbozzolo)
 # Email:		sbozzolator@gmail.com
-# Date:			03.05.2016
-# Last Edit:    19.03.2017 (andreatsh)
 
 import userGUI
 import os, sys
 
 if ( __name__ == "__main__" ):
-    
+
     tx,ty = userGUI.get_term_size()
     if (tx<28 or ty<96):
         print("\033[91m[ERROR]:\033[0m Your terminal is too small. Quit.")
